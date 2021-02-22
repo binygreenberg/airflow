@@ -206,6 +206,30 @@ function wait_for_celery_backend() {
     fi
 }
 
+# usage: docker_process_init_files [file [file [...]]]
+#    ie: docker_process_init_files /init.d/*
+# process initializer files, based on file extensions
+function docker_process_init_files() {
+    echo "Processing init files"
+    local f
+    for f; do
+        case "$f" in
+            *.sh)
+                if [[ -x "$f" ]]; then
+                    echo "$0: running $f"
+                    "$f"
+                else
+                    echo "$0: sourcing $f"
+                    . "$f"
+                fi
+                ;;
+            *)        echo "$0: ignoring $f"
+                ;;
+        esac
+        echo "File Processing complete"
+    done
+}
+
 function exec_to_bash_or_python_command_if_specified() {
     # If one of the commands: 'airflow', 'bash', 'python' is used, either run appropriate
     # command with exec or update the command line parameters
@@ -235,6 +259,8 @@ fi
 if [[ -n "${_AIRFLOW_WWW_USER_CREATE=}" ]] ; then
     create_www_user
 fi
+
+docker_process_init_files /docker-entrypoint-initdb.d/*
 
 # The `bash` and `python` commands should also verify the basic connections
 # So they are run after the DB check
